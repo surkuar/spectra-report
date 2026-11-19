@@ -23,8 +23,10 @@ Spectra groups failures by root cause, adds an AI hint with the likely cause and
 ### 1. Add the reporter
 
 ```bash
-npm i -D spectra-report        # or, before the npm release: npm i -D github:surkuar/spectra-report
+npm i -D github:surkuar/spectra-report
 ```
+
+> Spectra is not on npm yet, so install it from GitHub as shown. An npm release (`npm i -D spectra-report`) is planned.
 
 ```ts
 // playwright.config.ts
