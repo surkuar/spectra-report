@@ -1,19 +1,17 @@
 <!-- spectra-report -->
 ## ❌ Spectra Report: 12 passed, 8 failed, 2 flaky, 2 skipped
-**Pass rate** 63.6% · **Duration** 6s · **Commit** `2fa98e7` · [**Open full report →**](https://surkuar.github.io/spectra-report/main/1/)
+**Pass rate** 63.6% · **Duration** 5s · **Commit** `dc64b90` · [**Open full report →**](https://surkuar.github.io/spectra-report/main/2/)
 
-### 🆕 New failures (8)
+### Still failing (8)
 
-| Test | Project | Likely cause |
-| --- | --- | --- |
-| [auth › user can sign in with valid credentials @smoke](https://surkuar.github.io/spectra-report/main/1/#/test/e4d120e596f25fe2) | chromium | TimeoutError: locator.click: Timeout 5000ms exceeded. — getByRole('button', { name: 'Sign in' }) |
-| [auth › remember me keeps the session](https://surkuar.github.io/spectra-report/main/1/#/test/890aa9ef06351bc1) | chromium | TimeoutError: locator.click: Timeout 5000ms exceeded. — getByRole('button', { name: 'Sign in' }) |
-| [auth › wrong password shows an error](https://surkuar.github.io/spectra-report/main/1/#/test/3376a00c6f3587bc) | chromium | TimeoutError: locator.click: Timeout 5000ms exceeded. — getByRole('button', { name: 'Sign in' }) |
-| [checkout › order total includes sales tax @smoke](https://surkuar.github.io/spectra-report/main/1/#/test/de0701cddbe5f156) | chromium | expect(received).toBe(expected) // Object.is equality |
-| [auth › user can sign in with valid credentials @smoke](https://surkuar.github.io/spectra-report/main/1/#/test/5fee4876eded8df8) | firefox | TimeoutError: locator.click: Timeout 5000ms exceeded. — getByRole('button', { name: 'Sign in' }) |
-| [auth › remember me keeps the session](https://surkuar.github.io/spectra-report/main/1/#/test/49facab346aeec15) | firefox | TimeoutError: locator.click: Timeout 5000ms exceeded. — getByRole('button', { name: 'Sign in' }) |
-| [auth › wrong password shows an error](https://surkuar.github.io/spectra-report/main/1/#/test/7cfa10728ba5ac1b) | firefox | TimeoutError: locator.click: Timeout 5000ms exceeded. — getByRole('button', { name: 'Sign in' }) |
-| [checkout › order total includes sales tax @smoke](https://surkuar.github.io/spectra-report/main/1/#/test/b1c1b5cf2ffa8067) | firefox | expect(received).toBe(expected) // Object.is equality |
+- auth › user can sign in with valid credentials @smoke <sub>chromium</sub>
+- auth › remember me keeps the session <sub>chromium</sub>
+- auth › wrong password shows an error <sub>chromium</sub>
+- checkout › order total includes sales tax @smoke <sub>chromium</sub>
+- auth › user can sign in with valid credentials @smoke <sub>firefox</sub>
+- auth › remember me keeps the session <sub>firefox</sub>
+- auth › wrong password shows an error <sub>firefox</sub>
+- checkout › order total includes sales tax @smoke <sub>firefox</sub>
 
 ### Failure groups (2)
 
