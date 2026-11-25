@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>Spectra Report</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%234f46e5'/%3E%3Cpath d='M9 21l5-10 4 7 2-3 3 6' stroke='white' stroke-width='2.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<style>
+:root {
+  --bg: #f7f7f8; --panel: #ffffff; --panel-2: #f1f2f4; --border: #e2e4e8; --text: #17181c; --muted: #5d6270; --faint: #8a8f9c;
+  --accent: #4f46e5; --accent-soft: #eef0ff;
+  --pass: #15803d; --pass-soft: #e7f6ec; --fail: #c2261d; --fail-soft: #fdecea; --flaky: #b45309; --flaky-soft: #fdf3e2; --skip: #6b7280; --skip-soft: #f0f1f3;
+  --code-bg: #f4f5f7; --exp: #15803d; --rcv: #c2261d;
+  --shadow: 0 1px 2px rgba(16,24,40,.05);
+  --radius: 10px; --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+:root[data-theme="dark"] {
+  --bg: #0f1115; --panel: #171a21; --panel-2: #1e222b; --border: #2a2f3a; --text: #e8eaf0; --muted: #a1a7b5; --faint: #747b8a;
+  --accent: #8b85ff; --accent-soft: #24233d;
+  --pass: #4ade80; --pass-soft: #14301f; --fail: #f87171; --fail-soft: #3a1717; --flaky: #fbbf24; --flaky-soft: #3a2c10; --skip: #9ca3af; --skip-soft: #23262d;
+  --code-bg: #12151b; --exp: #4ade80; --rcv: #f87171; --shadow: none;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1115; --panel: #171a21; --panel-2: #1e222b; --border: #2a2f3a; --text: #e8eaf0; --muted: #a1a7b5; --faint: #747b8a;
+    --accent: #8b85ff; --accent-soft: #24233d;
+    --pass: #4ade80; --pass-soft: #14301f; --fail: #f87171; --fail-soft: #3a1717; --flaky: #fbbf24; --flaky-soft: #3a2c10; --skip: #9ca3af; --skip-soft: #23262d;
+    --code-bg: #12151b; --exp: #4ade80; --rcv: #f87171; --shadow: none;
+  }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.5 var(--sans); }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+button, input, select { font: inherit; color: inherit; }
+code, pre, .mono { font-family: var(--mono); font-size: 12.5px; }
+header.top { position: sticky; top: 0; z-index: 10; background: var(--panel); border-bottom: 1px solid var(--border); }
+.bar { max-width: 1240px; margin: 0 auto; padding: 10px 20px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.brand { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 15px; color: var(--text); }
+.brand svg { flex: none; }
+.runmeta { color: var(--muted); font-size: 12.5px; display: flex; gap: 12px; flex-wrap: wrap; }
+.runmeta b { color: var(--text); font-weight: 600; }
+.spacer { flex: 1; }
+nav.tabs { max-width: 1240px; margin: 0 auto; padding: 0 20px; display: flex; gap: 4px; overflow-x: auto; }
+nav.tabs a { padding: 9px 12px; color: var(--muted); border-bottom: 2px solid transparent; white-space: nowrap; font-weight: 500; }
+nav.tabs a:hover { color: var(--text); text-decoration: none; }
+nav.tabs a.on { color: var(--text); border-bottom-color: var(--accent); }
+.count { display: inline-block; min-width: 20px; padding: 0 6px; margin-left: 6px; border-radius: 10px; background: var(--panel-2); font-size: 11.5px; text-align: center; color: var(--muted); }
+.count.fail { background: var(--fail-soft); color: var(--fail); }
+.count.flaky { background: var(--flaky-soft); color: var(--flaky); }
+main { max-width: 1240px; margin: 0 auto; padding: 20px; }
+h1 { font-size: 20px; margin: 0 0 4px; }
+h2 { font-size: 16px; margin: 0 0 12px; }
+h3 { font-size: 14px; margin: 0 0 8px; }
+.sub { color: var(--muted); margin: 0 0 16px; }
+.panel { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); }
+.pad { padding: 16px; }
+.grid { display: grid; gap: 12px; }
+.tiles { grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); margin-bottom: 16px; }
+.tile { padding: 14px 16px; display: block; color: inherit; }
+a.tile:hover { text-decoration: none; border-color: var(--accent); }
+.tile .k { color: var(--muted); font-size: 12px; font-weight: 500; }
+.tile .v { font-size: 24px; font-weight: 700; letter-spacing: -0.02em; margin-top: 2px; }
+.tile.fail .v { color: var(--fail); } .tile.pass .v { color: var(--pass); } .tile.flaky .v { color: var(--flaky); }
+.two { grid-template-columns: 2fr 1fr; } @media (max-width: 900px) { .two { grid-template-columns: 1fr; } }
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 7px; border: 1px solid var(--border); background: var(--panel); cursor: pointer; font-size: 12.5px; color: var(--text); }
+.btn:hover { border-color: var(--accent); }
+.btn.ghost { border-color: transparent; background: transparent; }
+.pill { display: inline-flex; align-items: center; gap: 5px; padding: 1px 8px; border-radius: 999px; font-size: 11.5px; font-weight: 600; border: 1px solid transparent; white-space: nowrap; }
+.pill.passed { background: var(--pass-soft); color: var(--pass); }
+.pill.failed { background: var(--fail-soft); color: var(--fail); }
+.pill.flaky { background: var(--flaky-soft); color: var(--flaky); }
+.pill.skipped { background: var(--skip-soft); color: var(--skip); }
+.pill.new { background: var(--fail); color: #fff; }
+.pill.neutral { background: var(--panel-2); color: var(--muted); }
+.pill.ai { background: var(--accent-soft); color: var(--accent); }
+.ico { width: 14px; height: 14px; flex: none; }
+table { width: 100%; border-collapse: collapse; }
+th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+th { font-size: 12px; color: var(--muted); font-weight: 600; background: var(--panel-2); position: sticky; top: 0; }
+tr.row { cursor: pointer; } tr.row:hover td { background: var(--panel-2); }
+tr.row.sel td { background: var(--accent-soft); }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+.tpath { color: var(--muted); font-size: 12px; }
+.ttitle { font-weight: 500; }
+.strip { display: inline-flex; gap: 2px; vertical-align: middle; }
+.strip i { width: 7px; height: 16px; border-radius: 2px; display: inline-block; background: var(--skip-soft); }
+.strip i.passed { background: var(--pass); } .strip i.failed { background: var(--fail); } .strip i.flaky { background: var(--flaky); } .strip i.skipped { background: var(--border); }
+.strip i.now { outline: 2px solid var(--text); outline-offset: 1px; }
+.toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+.search { flex: 1; min-width: 220px; padding: 7px 10px 7px 32px; border-radius: 8px; border: 1px solid var(--border); background: var(--panel) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%238a8f9c' stroke-width='2'%3E%3Ccircle cx='7' cy='7' r='5'/%3E%3Cpath d='M11 11l3 3'/%3E%3C/svg%3E") 10px center no-repeat; }
+.search:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+select { padding: 6px 8px; border-radius: 8px; border: 1px solid var(--border); background: var(--panel); }
+.chip { padding: 5px 10px; border-radius: 999px; border: 1px solid var(--border); background: var(--panel); cursor: pointer; font-size: 12.5px; }
+.chip.on { background: var(--text); color: var(--bg); border-color: var(--text); }
+.group { margin-bottom: 14px; overflow: hidden; }
+.group-head { padding: 14px 16px; display: flex; gap: 12px; align-items: flex-start; }
+.group-rank { width: 30px; height: 30px; border-radius: 8px; background: var(--fail-soft); color: var(--fail); display: grid; place-items: center; font-weight: 700; flex: none; }
+.group-title { font-weight: 600; font-size: 14.5px; word-break: break-word; }
+.group-sig { color: var(--faint); font-size: 12px; margin-top: 2px; word-break: break-all; }
+.badges { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.ai-box { margin: 0 16px 14px; border: 1px solid var(--accent); border-radius: 8px; background: var(--accent-soft); padding: 12px 14px; }
+.ai-box .lbl { font-size: 11.5px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; display: flex; align-items: center; gap: 6px; }
+.ai-box dl { margin: 8px 0 0; display: grid; grid-template-columns: 110px 1fr; gap: 6px 12px; }
+.ai-box dt { color: var(--muted); font-weight: 600; font-size: 12.5px; }
+.ai-box dd { margin: 0; }
+.ai-off { margin: 0 16px 14px; color: var(--muted); font-size: 12.5px; border: 1px dashed var(--border); border-radius: 8px; padding: 10px 12px; }
+details.more { border-top: 1px solid var(--border); }
+details.more > summary { padding: 10px 16px; cursor: pointer; color: var(--muted); font-size: 12.5px; list-style: none; }
+details.more > summary::-webkit-details-marker { display: none; }
+details.more > summary::before { content: "▸ "; } details.more[open] > summary::before { content: "▾ "; }
+pre.err { margin: 0; padding: 12px 14px; background: var(--code-bg); border-radius: 8px; overflow: auto; white-space: pre-wrap; word-break: break-word; max-height: 420px; border: 1px solid var(--border); }
+pre.err .exp { color: var(--exp); } pre.err .rcv { color: var(--rcv); } pre.err .hl { background: var(--fail-soft); display: inline-block; width: 100%; } pre.err .dim { color: var(--faint); }
+.crumbs { color: var(--muted); font-size: 12.5px; margin-bottom: 8px; }
+.meta { display: flex; gap: 14px; flex-wrap: wrap; color: var(--muted); font-size: 12.5px; margin: 6px 0 16px; }
+.meta b { color: var(--text); font-weight: 600; }
+.attempts { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
+.section { margin-bottom: 16px; }
+.steps { list-style: none; margin: 0; padding: 0; }
+.steps li { margin: 0; }
+.step { display: flex; gap: 8px; align-items: baseline; padding: 4px 8px; border-radius: 6px; }
+.step:hover { background: var(--panel-2); }
+.step .t { flex: 1; word-break: break-word; } .step .d { color: var(--faint); font-size: 12px; font-variant-numeric: tabular-nums; }
+.step.bad .t { color: var(--fail); font-weight: 600; }
+.steps .steps { padding-left: 18px; border-left: 1px solid var(--border); margin-left: 10px; }
+.cat { font-size: 10.5px; color: var(--faint); border: 1px solid var(--border); border-radius: 4px; padding: 0 4px; }
+.atts { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+.att { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: var(--panel); }
+.att .n { padding: 6px 10px; font-size: 12px; color: var(--muted); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; gap: 8px; }
+.att img, .att video { display: block; width: 100%; max-height: 360px; object-fit: contain; background: var(--panel-2); }
+.att pre { margin: 0; padding: 10px; max-height: 240px; overflow: auto; font-size: 12px; white-space: pre-wrap; }
+.att .body { padding: 10px; font-size: 12.5px; }
+.empty { padding: 40px 16px; text-align: center; color: var(--muted); }
+.trend svg { width: 100%; height: auto; display: block; }
+.legend { display: flex; gap: 14px; color: var(--muted); font-size: 12px; margin-top: 6px; }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+.kbd { font-family: var(--mono); font-size: 11px; border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 4px; padding: 0 4px; color: var(--muted); }
+.foot { color: var(--faint); font-size: 12px; text-align: center; padding: 24px 0 8px; }
+.toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--text); color: var(--bg); padding: 8px 14px; border-radius: 8px; font-size: 13px; opacity: 0; transition: opacity .2s; pointer-events: none; }
+.toast.show { opacity: 1; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="bar">
+    <a class="brand" href="#/" aria-label="Spectra Report home">
+      <svg width="22" height="22" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="var(--accent)"/><path d="M9 21l5-10 4 7 2-3 3 6" stroke="#fff" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Spectra
+    </a>
+    <div class="runmeta" id="runmeta"></div>
+    <div class="spacer"></div>
+    <button class="btn ghost" id="theme" type="button" title="Toggle theme" aria-label="Toggle light or dark theme"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 2a6 6 0 0 1 0 12z" fill="currentColor"/></svg> Theme</button>
+  </div>
+  <nav class="tabs" id="tabs" aria-label="Report sections"></nav>
+</header>
+<main id="app" tabindex="-1"></main>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script src="data/report.js"></script>
+<script>
+(function () {
+  'use strict';
+  var R = window.__SPECTRA_REPORT__;
+  var app = document.getElementById('app');
+
+  // ---------- tiny DOM helper: text only, never HTML ----------
+  function h(tag, props) {
+    var el = document.createElement(tag);
+    if (props) for (var k in props) {
+      var v = props[k];
+      if (v == null || v === false) continue;
+      if (k === 'class') el.className = v;
+      else if (k === 'text') el.textContent = v;
+      else if (k.slice(0, 2) === 'on') el.addEventListener(k.slice(2), v);
+      else if (k === 'style') el.setAttribute('style', v);
+      else el.setAttribute(k, v === true ? '' : String(v));
+    }
+    for (var i = 2; i < arguments.length; i++) add(el, arguments[i]);
+    return el;
+  }
+  function add(el, kid) {
+    if (kid == null || kid === false) return;
+    if (Array.isArray(kid)) { kid.forEach(function (k) { add(el, k); }); return; }
+    el.appendChild(typeof kid === 'object' ? kid : document.createTextNode(String(kid)));
+  }
+  var SVGNS = 'http://www.w3.org/2000/svg';
+  function s(tag, attrs) {
+    var el = document.createElementNS(SVGNS, tag);
+    for (var k in attrs) if (attrs[k] != null) el.setAttribute(k, attrs[k]);
+    for (var i = 2; i < arguments.length; i++) { var c = arguments[i]; if (c == null) continue; if (Array.isArray(c)) c.forEach(function (x) { if (x) el.appendChild(x); }); else el.appendChild(typeof c === 'object' ? c : document.createTextNode(String(c))); }
+    return el;
+  }
+
+  // ---------- theme ----------
+  var root = document.documentElement;
+  function store(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } }
+  var savedTheme = store('spectra-theme'); if (savedTheme) root.setAttribute('data-theme', savedTheme);
+  document.getElementById('theme').addEventListener('click', function () {
+    var dark = root.getAttribute('data-theme') ? root.getAttribute('data-theme') === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+    var next = dark ? 'light' : 'dark'; root.setAttribute('data-theme', next); store('spectra-theme', next);
+  });
+
+  if (!R) {
+    app.appendChild(h('div', { class: 'panel empty' }, h('h2', { text: 'No report data found' }), h('p', { text: 'Expected data/report.js next to this page. Run "npx spectra generate" to build it.' })));
+    return;
+  }
+
+  // ---------- helpers ----------
+  var tests = R.tests || [];
+  var byId = {}; tests.forEach(function (t) { byId[t.id] = t; });
+  var clusters = R.clusters || [];
+  var clusterById = {}; clusters.forEach(function (c) { clusterById[c.id] = c; });
+  var stats = R.stats;
+  var projects = Array.from(new Set(tests.map(function (t) { return t.project; }).filter(Boolean))).sort();
+  var LABEL = { passed: 'Passed', failed: 'Failed', flaky: 'Flaky', skipped: 'Skipped' };
+  var ICON = {
+    passed: 'M3 8.5l3 3 7-7', failed: 'M4 4l8 8M12 4l-8 8', flaky: 'M2.5 8a5.5 5.5 0 0 1 9.4-3.9M13.5 8a5.5 5.5 0 0 1-9.4 3.9M12 1.5v3h-3M4 14.5v-3h3', skipped: 'M4 8h8'
+  };
+  function icon(status) { return s('svg', { class: 'ico', viewBox: '0 0 16 16', fill: 'none', stroke: 'currentColor', 'stroke-width': '2', 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'aria-hidden': 'true' }, s('path', { d: ICON[status] || ICON.skipped })); }
+  function pill(status, text) { return h('span', { class: 'pill ' + status }, icon(status), text || LABEL[status]); }
+  function dur(ms) {
+    if (ms == null) return '';
+    if (ms < 1000) return Math.round(ms) + 'ms';
+    var sec = ms / 1000; if (sec < 60) return (sec < 10 ? sec.toFixed(1) : Math.round(sec)) + 's';
+    var m = Math.floor(sec / 60), r = Math.round(sec % 60); if (m < 60) return m + 'm' + (r ? ' ' + r + 's' : '');
+    return Math.floor(m / 60) + 'h ' + (m % 60) + 'm';
+  }
+  function pct(x) { return Math.round(x * 1000) / 10 + '%'; }
+  function passRate(st) { var ran = st.total - st.skipped; return ran ? (st.passed + st.flaky) / ran : 1; }
+  function when(iso) { try { return new Date(iso).toLocaleString(); } catch (e) { return iso; } }
+  function full(t) { return t.titlePath.join(' › '); }
+  function toast(msg) { var el = document.getElementById('toast'); el.textContent = msg; el.classList.add('show'); setTimeout(function () { el.classList.remove('show'); }, 1600); }
+  function copy(text) {
+    var done = function () { toast('Copied'); };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, fallback); else fallback();
+    function fallback() { var ta = h('textarea', { style: 'position:fixed;left:-9999px' }); ta.value = text; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); done(); } catch (e) { toast('Copy failed'); } ta.remove(); }
+  }
+  function safePath(p) { return typeof p === 'string' && /^data\/attachments\/[\w.-]+$/.test(p) ? p : null; }
+  function strip(t) {
+    var hist = (t.history || []).slice(-19);
+    var cells = hist.map(function (e) { return h('i', { class: e.status, title: e.status + ' · ' + when(e.at) }); });
+    cells.push(h('i', { class: t.status + ' now', title: 'this run: ' + t.status }));
+    return h('span', { class: 'strip', 'aria-label': 'History: ' + hist.map(function (e) { return e.status; }).concat(t.status).join(', ') }, cells);
+  }
+
+  // ---------- header ----------
+  (function header() {
+    var ci = R.run.ci || {};
+    var items = [];
+    if (R.run.name) items.push(h('span', null, h('b', { text: R.run.name })));
+    if (ci.repo) items.push(h('span', null, ci.repo));
+    if (ci.branch) items.push(h('span', null, 'branch ', h('b', { text: ci.branch })));
+    if (ci.pr) items.push(h('span', null, 'PR ', h('b', { text: '#' + ci.pr })));
+    if (ci.commit) items.push(h('span', null, 'commit ', h('code', { text: ci.commit.slice(0, 7) })));
+    items.push(h('span', null, when(R.run.startedAt)));
+    if (ci.runUrl) items.push(h('a', { href: ci.runUrl, target: '_blank', rel: 'noopener', text: 'CI run ↗' }));
+    add(document.getElementById('runmeta'), items);
+    document.title = (stats.failed ? '✗ ' : '✓ ') + (R.run.name || ci.branch || 'Spectra Report') + ' · Spectra';
+  })();
+
+  var flakyList = tests.filter(function (t) { return t.status === 'flaky' || (t.flakeRate || 0) > 0; }).sort(function (a, b) { return (b.flakeRate || 0) - (a.flakeRate || 0) || (b.status === 'flaky') - (a.status === 'flaky'); });
+
+  function renderTabs(route) {
+    var nav = document.getElementById('tabs'); nav.textContent = '';
+    var tabs = [
+      ['overview', 'Overview', null, ''],
+      ['groups', 'Failure groups', clusters.length, clusters.length ? 'fail' : ''],
+      ['tests', 'Tests', tests.length, ''],
+      ['flaky', 'Flaky', flakyList.length, flakyList.length ? 'flaky' : '']
+    ];
+    var active = route.name === 'test' ? 'tests' : route.name;
+    tabs.forEach(function (t) {
+      nav.appendChild(h('a', { href: '#/' + t[0], class: active === t[0] ? 'on' : '', 'aria-current': active === t[0] ? 'page' : null }, t[1], t[2] != null ? h('span', { class: 'count ' + t[3], text: t[2] }) : null));
+    });
+  }
+
+  // ---------- routing ----------
+  function parseRoute() {
+    var raw = location.hash.replace(/^#\/?/, '');
+    var qi = raw.indexOf('?');
+    var path = qi >= 0 ? raw.slice(0, qi) : raw;
+    var q = new URLSearchParams(qi >= 0 ? raw.slice(qi + 1) : '');
+    var parts = path.split('/');
+    var name = parts[0] || (clusters.length ? 'groups' : 'overview');
+    return { name: name, arg: parts[1] ? decodeURIComponent(parts[1]) : '', q: q };
+  }
+  function go(hash) { location.hash = hash; }
+  var currentRows = []; var selIndex = -1;
+  function render() {
+    var route = parseRoute();
+    renderTabs(route);
+    app.textContent = '';
+    currentRows = []; selIndex = -1;
+    var view = { overview: viewOverview, groups: viewGroups, tests: viewTests, test: viewTest, flaky: viewFlaky }[route.name] || viewOverview;
+    view(route);
+    app.appendChild(h('div', { class: 'foot' }, (R.generator || 'Spectra Report') + ' · generated ' + when(R.generatedAt) + ' · ', h('span', { class: 'kbd', text: '/' }), ' search ', h('span', { class: 'kbd', text: 'j' }), h('span', { class: 'kbd', text: 'k' }), ' move ', h('span', { class: 'kbd', text: 'Esc' }), ' back'));
+  }
+  window.addEventListener('hashchange', function () { render(); window.scrollTo(0, 0); });
+
+  // ---------- overview ----------
+  function tile(k, v, cls, href) { return h(href ? 'a' : 'div', { class: 'panel tile ' + (cls || ''), href: href }, h('div', { class: 'k', text: k }), h('div', { class: 'v', text: v })); }
+  function viewOverview() {
+    var newFails = tests.filter(function (t) { return t.isNewFailure; }).length;
+    app.appendChild(h('h1', { text: stats.failed ? stats.failed + ' failing ' + (stats.failed === 1 ? 'test' : 'tests') + ' in ' + clusters.length + ' ' + (clusters.length === 1 ? 'group' : 'groups') : 'All tests passed' }));
+    app.appendChild(h('p', { class: 'sub', text: stats.total + ' tests · ' + pct(passRate(stats)) + ' pass rate · ' + dur(R.run.durationMs) + (R.run.frameworkVersion ? ' · ' + R.run.framework + ' ' + R.run.frameworkVersion : '') }));
+    app.appendChild(h('div', { class: 'grid tiles' },
+      tile('Pass rate', pct(passRate(stats)), stats.failed ? '' : 'pass'),
+      tile('Total', stats.total, '', '#/tests'),
+      tile('Passed', stats.passed, 'pass', '#/tests?status=passed'),
+      tile('Failed', stats.failed, stats.failed ? 'fail' : '', '#/tests?status=failed'),
+      tile('New failures', newFails, newFails ? 'fail' : '', '#/tests?status=failed&new=1'),
+      tile('Flaky', stats.flaky, stats.flaky ? 'flaky' : '', '#/tests?status=flaky'),
+      tile('Skipped', stats.skipped, '', '#/tests?status=skipped'),
+      tile('Duration', dur(R.run.durationMs))
+    ));
+    var slow = tests.filter(function (t) { return t.status !== 'skipped'; }).sort(function (a, b) { return b.durationMs - a.durationMs; }).slice(0, 6);
+    var byProject = {};
+    tests.forEach(function (t) { var p = t.project || 'default'; var o = byProject[p] = byProject[p] || { total: 0, failed: 0, flaky: 0 }; o.total++; if (t.status === 'failed') o.failed++; if (t.status === 'flaky') o.flaky++; });
+    app.appendChild(h('div', { class: 'grid two' },
+      h('div', { class: 'panel pad trend' }, h('h2', { text: 'Pass rate, last ' + (R.trend || []).length + ' runs' }), trendChart(R.trend || [])),
+      h('div', { class: 'panel' },
+        h('div', { class: 'pad', style: 'padding-bottom:8px' }, h('h2', { text: 'By project', style: 'margin:0' })),
+        h('table', null, h('thead', null, h('tr', null, h('th', { text: 'Project' }), h('th', { class: 'num', text: 'Tests' }), h('th', { class: 'num', text: 'Failed' }), h('th', { class: 'num', text: 'Flaky' }))),
+          h('tbody', null, Object.keys(byProject).sort().map(function (p) { var o = byProject[p]; return h('tr', { class: 'row', onclick: function () { go('#/tests?project=' + encodeURIComponent(p)); } }, h('td', { text: p }), h('td', { class: 'num', text: o.total }), h('td', { class: 'num', text: o.failed, style: o.failed ? 'color:var(--fail);font-weight:600' : '' }), h('td', { class: 'num', text: o.flaky })); })))
+      )
+    ));
+    app.appendChild(h('div', { class: 'panel', style: 'margin-top:12px' },
+      h('div', { class: 'pad', style: 'padding-bottom:8px' }, h('h2', { text: 'Slowest tests', style: 'margin:0' })),
+      testTable(slow, false)));
+  }
+
+  function trendChart(points) {
+    if (points.length < 2) return h('p', { class: 'sub', text: 'Trend appears after two or more runs with history.' });
+    var W = 640, H = 200, L = 40, Rr = 12, T = 12, B = 28;
+    var n = points.length, x = function (i) { return L + (n === 1 ? 0 : i * (W - L - Rr) / (n - 1)); };
+    var rates = points.map(function (p) { return passRate(p.stats); });
+    var minR = Math.max(0, Math.floor((Math.min.apply(null, rates) - 0.05) * 10) / 10);
+    var y = function (r) { return T + (1 - (r - minR) / (1 - minR || 1)) * (H - T - B); };
+    var maxF = Math.max.apply(null, points.map(function (p) { return p.stats.failed + p.stats.flaky; }).concat([1]));
+    var bw = Math.max(3, Math.min(14, (W - L - Rr) / n * 0.5));
+    var grid = [];
+    for (var g = 0; g <= 4; g++) { var r = minR + (1 - minR) * g / 4; grid.push(s('line', { x1: L, x2: W - Rr, y1: y(r), y2: y(r), stroke: 'var(--border)' })); grid.push(s('text', { x: L - 6, y: y(r) + 4, 'text-anchor': 'end', 'font-size': '10.5', fill: 'var(--faint)' }, Math.round(r * 100) + '%')); }
+    var bars = points.map(function (p, i) { var hF = (p.stats.failed / maxF) * (H - T - B) * 0.35, hK = (p.stats.flaky / maxF) * (H - T - B) * 0.35; return s('g', null, s('rect', { x: x(i) - bw / 2, y: H - B - hF, width: bw, height: hF, fill: 'var(--fail)', opacity: '.55' }), s('rect', { x: x(i) - bw / 2, y: H - B - hF - hK, width: bw, height: hK, fill: 'var(--flaky)', opacity: '.55' }), s('title', null, when(p.at) + ': ' + pct(passRate(p.stats)) + ' pass, ' + p.stats.failed + ' failed, ' + p.stats.flaky + ' flaky')); });
+    var d = rates.map(function (r, i) { return (i ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(r).toFixed(1); }).join('');
+    var dots = rates.map(function (r, i) { return s('circle', { cx: x(i), cy: y(r), r: i === n - 1 ? 4 : 2.5, fill: i === n - 1 ? 'var(--accent)' : 'var(--panel)', stroke: 'var(--accent)', 'stroke-width': '1.5' }, s('title', null, when(points[i].at) + ': ' + pct(r))); });
+    var svg = s('svg', { viewBox: '0 0 ' + W + ' ' + H, role: 'img', 'aria-label': 'Pass rate trend' }, grid, bars, s('path', { d: d, fill: 'none', stroke: 'var(--accent)', 'stroke-width': '2' }), dots,
+      s('text', { x: L, y: H - 8, 'font-size': '10.5', fill: 'var(--faint)' }, 'oldest'), s('text', { x: W - Rr, y: H - 8, 'font-size': '10.5', fill: 'var(--faint)', 'text-anchor': 'end' }, 'this run'));
+    return h('div', null, svg, h('div', { class: 'legend' }, h('span', null, h('i', { style: 'background:var(--accent)' }), 'pass rate'), h('span', null, h('i', { style: 'background:var(--fail);opacity:.55' }), 'failed'), h('span', null, h('i', { style: 'background:var(--flaky);opacity:.55' }), 'flaky')));
+  }
+
+  // ---------- failure groups ----------
+  function aiBlock(c) {
+    if (c.ai) {
+      var a = c.ai;
+      return h('div', { class: 'ai-box' },
+        h('div', { class: 'lbl' }, '✦ AI hint', h('span', { class: 'pill ai', text: a.category }), h('span', { class: 'pill neutral', text: Math.round(a.confidence * 100) + '% confidence' }), a.cached ? h('span', { class: 'pill neutral', text: 'cached' }) : null),
+        h('div', { style: 'margin-top:6px;font-weight:600', text: a.summary }),
+        h('dl', null,
+          h('dt', { text: 'Likely cause' }), h('dd', { text: a.likelyCause }),
+          h('dt', { text: 'Suggested fix' }), h('dd', null, a.suggestedFix, ' ', h('button', { class: 'btn ghost', type: 'button', onclick: function () { copy(a.suggestedFix); }, text: 'Copy' }))),
+        h('div', { style: 'margin-top:8px;font-size:11.5px;color:var(--muted)', text: 'Suggestion from ' + (a.model || 'AI') + '. Verify before acting.' }));
+    }
+    if (c.aiError) return h('div', { class: 'ai-off', text: 'AI analysis failed for this group: ' + c.aiError });
+    return h('div', { class: 'ai-off' }, 'AI hints are off. Set ', h('code', { text: 'ANTHROPIC_API_KEY' }), ' or ', h('code', { text: 'OPENAI_API_KEY' }), ' in CI to get a likely cause and fix for each group.');
+  }
+  function viewGroups() {
+    if (!clusters.length) { app.appendChild(h('div', { class: 'panel empty' }, h('h2', { text: 'No failures 🎉' }), h('p', { text: stats.flaky ? stats.flaky + ' test(s) were flaky; see the Flaky tab.' : 'Every test passed.' }))); return; }
+    app.appendChild(h('h1', { text: stats.failed + ' failures share ' + clusters.length + ' root ' + (clusters.length === 1 ? 'cause' : 'causes') }));
+    app.appendChild(h('p', { class: 'sub', text: 'Failures are grouped by error signature and ranked by tests affected. Fix the top group first.' }));
+    clusters.forEach(function (c, i) {
+      var list = c.testIds.map(function (id) { return byId[id]; }).filter(Boolean);
+      var projs = Array.from(new Set(list.map(function (t) { return t.project; }).filter(Boolean)));
+      app.appendChild(h('section', { class: 'panel group', id: c.id },
+        h('div', { class: 'group-head' },
+          h('div', { class: 'group-rank', text: i + 1 }),
+          h('div', { style: 'flex:1;min-width:0' },
+            h('div', { class: 'group-title', text: c.title }),
+            h('div', { class: 'group-sig mono', text: c.signature }),
+            h('div', { class: 'badges' },
+              h('span', { class: 'pill failed', text: list.length + ' ' + (list.length === 1 ? 'test' : 'tests') }),
+              c.newFailures ? h('span', { class: 'pill new', text: c.newFailures + ' new' }) : h('span', { class: 'pill neutral', text: 'recurring' }),
+              projs.map(function (p) { return h('span', { class: 'pill neutral', text: p }); }))),
+          h('a', { class: 'btn', href: '#/test/' + list[0].id, text: 'Open first test →' })),
+        aiBlock(c),
+        h('details', { class: 'more' }, h('summary', { text: 'Error and affected tests' }),
+          h('div', { style: 'padding:0 16px 14px' }, errorPre(c.sampleError), h('div', { style: 'height:10px' }), testTable(list, false)))
+      ));
+    });
+  }
+
+  // ---------- test list ----------
+  function testTable(list, keyboard) {
+    if (!list.length) return h('div', { class: 'empty', text: 'No tests match.' });
+    var rows = list.map(function (t) {
+      var tr = h('tr', { class: 'row', tabindex: '0', onclick: function () { go('#/test/' + t.id); }, onkeydown: function (e) { if (e.key === 'Enter') go('#/test/' + t.id); } },
+        h('td', { style: 'width:96px' }, pill(t.status)),
+        h('td', null, h('div', { class: 'ttitle' }, t.title, t.isNewFailure ? h('span', { class: 'pill new', style: 'margin-left:8px', text: 'new' }) : null), h('div', { class: 'tpath', text: t.titlePath.slice(0, -1).concat([t.file + (t.line ? ':' + t.line : '')]).join(' › ') })),
+        h('td', { class: 'tpath', text: t.project || '' }),
+        h('td', null, strip(t)),
+        h('td', { class: 'num', text: dur(t.durationMs) }));
+      if (keyboard) currentRows.push({ el: tr, id: t.id });
+      return tr;
+    });
+    return h('div', { style: 'overflow-x:auto' }, h('table', null, h('thead', null, h('tr', null, h('th', { text: 'Status' }), h('th', { text: 'Test' }), h('th', { text: 'Project' }), h('th', { text: 'History' }), h('th', { class: 'num', text: 'Duration' }))), h('tbody', null, rows)));
+  }
+  function viewTests(route) {
+    var q = route.q;
+    var status = q.get('status') || '', text = q.get('q') || '', project = q.get('project') || '', sort = q.get('sort') || 'status', onlyNew = q.get('new') === '1';
+    function setQ(k, v) { var nq = new URLSearchParams(q); if (v) nq.set(k, v); else nq.delete(k); var str = nq.toString(); history.replaceState(null, '', '#/tests' + (str ? '?' + str : '')); render(); }
+    var input = h('input', { class: 'search', type: 'search', placeholder: 'Search tests by title, file or tag…', value: text, 'aria-label': 'Search tests', id: 'search' });
+    var timer; input.addEventListener('input', function () { clearTimeout(timer); timer = setTimeout(function () { setQ('q', input.value.trim()); var el = document.getElementById('search'); if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); } }, 180); });
+    var chips = ['', 'failed', 'flaky', 'passed', 'skipped'].map(function (st) {
+      var n = st ? stats[st] : stats.total;
+      return h('button', { type: 'button', class: 'chip' + (status === st ? ' on' : ''), onclick: function () { setQ('status', st); }, 'aria-pressed': status === st ? 'true' : 'false' }, (st ? LABEL[st] : 'All') + ' ' + n);
+    });
+    var projSel = projects.length > 1 ? h('select', { 'aria-label': 'Project', onchange: function (e) { setQ('project', e.target.value); } }, h('option', { value: '', text: 'All projects' }), projects.map(function (p) { return h('option', { value: p, selected: p === project, text: p }); })) : null;
+    var sortSel = h('select', { 'aria-label': 'Sort', onchange: function (e) { setQ('sort', e.target.value === 'status' ? '' : e.target.value); } },
+      [['status', 'Sort: failures first'], ['duration', 'Sort: slowest'], ['flake', 'Sort: flakiest'], ['name', 'Sort: name']].map(function (o) { return h('option', { value: o[0], selected: sort === o[0], text: o[1] }); }));
+    app.appendChild(h('div', { class: 'toolbar' }, input, projSel, sortSel));
+    app.appendChild(h('div', { class: 'toolbar' }, chips, onlyNew ? h('button', { class: 'chip on', type: 'button', onclick: function () { setQ('new', ''); }, text: 'New failures only ✕' }) : null));
+    var needle = text.toLowerCase();
+    var order = { failed: 0, flaky: 1, passed: 2, skipped: 3 };
+    var list = tests.filter(function (t) {
+      if (status && t.status !== status) return false;
+      if (project && t.project !== project) return false;
+      if (onlyNew && !t.isNewFailure) return false;
+      if (needle) { var hay = (full(t) + ' ' + t.file + ' ' + (t.tags || []).join(' ') + ' ' + (t.project || '')).toLowerCase(); if (hay.indexOf(needle) < 0) return false; }
+      return true;
+    }).sort(function (a, b) {
+      if (sort === 'duration') return b.durationMs - a.durationMs;
+      if (sort === 'flake') return (b.flakeRate || 0) - (a.flakeRate || 0);
+      if (sort === 'name') return full(a).localeCompare(full(b));
+      return order[a.status] - order[b.status] || (b.isNewFailure ? 1 : 0) - (a.isNewFailure ? 1 : 0) || full(a).localeCompare(full(b));
+    });
+    app.appendChild(h('div', { class: 'panel' }, testTable(list, true)));
+  }
+
+  // ---------- flaky ----------
+  function viewFlaky() {
+    app.appendChild(h('h1', { text: flakyList.length ? flakyList.length + ' unstable ' + (flakyList.length === 1 ? 'test' : 'tests') : 'No flaky tests' }));
+    app.appendChild(h('p', { class: 'sub', text: 'Flake rate = share of recent runs where a test passed only on retry or flipped between pass and fail.' }));
+    if (!flakyList.length) return;
+    var quarantine = flakyList.filter(function (t) { return (t.flakeRate || 0) >= 0.2 || t.status === 'flaky'; }).map(function (t) { return '# ' + t.file + (t.line ? ':' + t.line : '') + '\n' + full(t); }).join('\n');
+    app.appendChild(h('div', { class: 'toolbar' }, h('button', { class: 'btn', type: 'button', onclick: function () { copy(quarantine); }, text: 'Copy quarantine list' })));
+    var rows = flakyList.map(function (t) {
+      return h('tr', { class: 'row', onclick: function () { go('#/test/' + t.id); } },
+        h('td', null, h('div', { class: 'ttitle', text: t.title }), h('div', { class: 'tpath', text: t.file })),
+        h('td', { class: 'tpath', text: t.project || '' }),
+        h('td', null, strip(t)),
+        h('td', { class: 'num', style: 'font-weight:600;color:var(--flaky)', text: Math.round((t.flakeRate || 0) * 100) + '%' }),
+        h('td', null, pill(t.status)));
+    });
+    app.appendChild(h('div', { class: 'panel' }, h('table', null, h('thead', null, h('tr', null, h('th', { text: 'Test' }), h('th', { text: 'Project' }), h('th', { text: 'History' }), h('th', { class: 'num', text: 'Flake rate' }), h('th', { text: 'This run' }))), h('tbody', null, rows))));
+  }
+
+  // ---------- test detail ----------
+  function errorPre(text) {
+    var pre = h('pre', { class: 'err' });
+    var inCallLog = false;
+    String(text || '').split('\n').forEach(function (line, i, arr) {
+      var cls = '';
+      if (/^\s*Call log:/.test(line)) inCallLog = true;
+      else if (inCallLog && line.trim() && !/^\s+/.test(line)) inCallLog = false;
+      if (inCallLog || /^\s*at /.test(line)) cls = 'dim';
+      else if (/^(Expected|- Expected|-\s)/.test(line)) cls = 'exp';
+      else if (/^(Received|\+ Received|\+\s)/.test(line)) cls = 'rcv';
+      else if (/^\s*>\s*\d+\s*\|/.test(line)) cls = 'hl';
+      pre.appendChild(cls ? h('span', { class: cls, text: line }) : document.createTextNode(line));
+      if (i < arr.length - 1) pre.appendChild(document.createTextNode('\n'));
+    });
+    return pre;
+  }
+  function stepTree(steps) {
+    if (!steps || !steps.length) return null;
+    return h('ul', { class: 'steps' }, steps.map(function (st) {
+      return h('li', null,
+        h('div', { class: 'step' + (st.error ? ' bad' : '') }, st.error ? icon('failed') : h('span', { class: 'ico' }), h('span', { class: 't', text: st.title }), st.category && st.category !== 'test.step' ? h('span', { class: 'cat', text: st.category }) : null, h('span', { class: 'd', text: dur(st.durationMs) })),
+        st.error ? h('div', { style: 'margin:0 0 4px 30px;font-size:12px;color:var(--fail)', text: st.error }) : null,
+        stepTree(st.steps));
+    }));
+  }
+  function attachmentCard(a) {
+    var p = safePath(a.path);
+    var name = h('div', { class: 'n' }, h('span', { text: a.name }), p ? h('a', { href: p, download: '', text: 'Download' }) : null);
+    if (p && /^image\//.test(a.contentType)) return h('div', { class: 'att' }, name, h('a', { href: p, target: '_blank', rel: 'noopener' }, h('img', { src: p, alt: a.name, loading: 'lazy' })));
+    if (p && /^video\//.test(a.contentType)) return h('div', { class: 'att' }, name, h('video', { src: p, controls: true, preload: 'metadata' }));
+    if (p && (a.name === 'trace' || /trace/.test(a.name)) && /zip/.test(a.contentType)) {
+      var body = h('div', { class: 'body' });
+      if (/^https?:/.test(location.protocol)) {
+        var abs = new URL(p, location.href).href;
+        body.appendChild(h('a', { class: 'btn', href: 'https://trace.playwright.dev/?trace=' + encodeURIComponent(abs), target: '_blank', rel: 'noopener', text: 'Open in Playwright Trace Viewer ↗' }));
+      } else {
+        body.appendChild(h('div', { text: 'Open locally with:' }));
+        body.appendChild(h('code', { text: 'npx playwright show-trace ' + p }));
+      }
+      return h('div', { class: 'att' }, name, body);
+    }
+    if (a.body != null) return h('div', { class: 'att' }, name, h('pre', { text: a.body }));
+    return h('div', { class: 'att' }, name, h('div', { class: 'body tpath', text: a.contentType }));
+  }
+  function viewTest(route) {
+    var t = byId[route.arg];
+    if (!t) { app.appendChild(h('div', { class: 'panel empty', text: 'Test not found in this report.' })); return; }
+    var c = t.clusterId ? clusterById[t.clusterId] : null;
+    var attemptIdx = Math.min(Number(route.q.get('attempt') || t.attempts.length - 1), t.attempts.length - 1);
+    if (t.status === 'flaky' && !route.q.get('attempt')) attemptIdx = Math.max(0, t.attempts.findIndex(function (a) { return a.status !== 'passed'; }));
+    app.appendChild(h('div', { class: 'crumbs' }, h('a', { href: '#/tests', text: 'Tests' }), ' › ', t.file + (t.line ? ':' + t.line : '')));
+    app.appendChild(h('h1', null, t.title));
+    app.appendChild(h('div', { class: 'meta' },
+      pill(t.status), t.isNewFailure ? h('span', { class: 'pill new', text: 'new failure' }) : null,
+      t.project ? h('span', null, 'project ', h('b', { text: t.project })) : null,
+      h('span', null, 'duration ', h('b', { text: dur(t.durationMs) })),
+      h('span', null, 'attempts ', h('b', { text: t.attempts.length })),
+      t.flakeRate ? h('span', null, 'flake rate ', h('b', { text: Math.round(t.flakeRate * 100) + '%' })) : null,
+      (t.tags || []).map(function (tag) { return h('span', { class: 'pill neutral', text: tag }); }),
+      h('span', null, strip(t)),
+      h('button', { class: 'btn ghost', type: 'button', onclick: function () { copy(location.href); }, text: 'Copy link' })));
+    if (t.titlePath.length > 1) app.appendChild(h('p', { class: 'sub', style: 'margin-top:-8px', text: full(t) }));
+    (t.annotations || []).forEach(function (an) { app.appendChild(h('p', { class: 'tpath' }, h('b', { text: an.type + ': ' }), an.description || '')); });
+
+    if (c) {
+      app.appendChild(h('div', { class: 'panel section', style: 'padding-top:12px' },
+        h('div', { style: 'padding:0 16px 10px' }, 'Failure group: ', h('a', { href: '#/groups', text: c.title }), h('span', { class: 'tpath', text: ' · ' + c.testIds.length + ' tests share this cause' })),
+        aiBlock(c)));
+    }
+    if (t.attempts.length > 1) {
+      app.appendChild(h('div', { class: 'attempts', role: 'tablist' }, t.attempts.map(function (a, i) {
+        return h('button', { type: 'button', role: 'tab', class: 'chip' + (i === attemptIdx ? ' on' : ''), 'aria-selected': i === attemptIdx ? 'true' : 'false', onclick: function () { history.replaceState(null, '', '#/test/' + t.id + '?attempt=' + i); render(); } }, (i === 0 ? 'Run' : 'Retry ' + i) + ' · ' + a.status);
+      })));
+    }
+    var a = t.attempts[attemptIdx];
+    if (!a) return;
+    if (a.errors.length) {
+      app.appendChild(h('div', { class: 'section' }, h('h2', { text: a.errors.length > 1 ? 'Errors (' + a.errors.length + ')' : 'Error' }),
+        a.errors.map(function (e) { return h('div', { style: 'margin-bottom:10px' }, errorPre(e.message), e.snippet ? h('div', { style: 'margin-top:8px' }, errorPre(e.snippet)) : null, e.location ? h('div', { class: 'tpath', style: 'margin-top:4px', text: e.location.file + ':' + e.location.line + ':' + e.location.column }) : null); })));
+    }
+    var atts = a.attachments || [];
+    if (atts.length) app.appendChild(h('div', { class: 'section' }, h('h2', { text: 'Attachments' }), h('div', { class: 'atts' }, atts.map(attachmentCard))));
+    if (a.steps && a.steps.length) app.appendChild(h('div', { class: 'section panel pad' }, h('h2', { text: 'Steps' }), stepTree(a.steps)));
+    var out = (a.stdout || []).join(''), err = (a.stderr || []).join('');
+    if (out || err) app.appendChild(h('div', { class: 'section' }, h('h2', { text: 'Console output' }), out ? h('pre', { class: 'err', text: out }) : null, err ? h('pre', { class: 'err', style: 'margin-top:8px;color:var(--fail)', text: err }) : null));
+  }
+
+  // ---------- keyboard ----------
+  document.addEventListener('keydown', function (e) {
+    var tag = (e.target && e.target.tagName) || '';
+    var typing = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
+    if (e.key === '/' && !typing) { e.preventDefault(); if (parseRoute().name !== 'tests') { go('#/tests'); setTimeout(function () { var el = document.getElementById('search'); if (el) el.focus(); }, 0); } else { var el = document.getElementById('search'); if (el) el.focus(); } return; }
+    if (e.key === 'Escape') { if (typing) { e.target.blur(); return; } if (parseRoute().name === 'test') history.back(); return; }
+    if (typing || !currentRows.length) return;
+    if (e.key === 'j' || e.key === 'k') {
+      if (currentRows[selIndex]) currentRows[selIndex].el.classList.remove('sel');
+      selIndex = Math.max(0, Math.min(currentRows.length - 1, selIndex + (e.key === 'j' ? 1 : -1)));
+      currentRows[selIndex].el.classList.add('sel'); currentRows[selIndex].el.focus();
+    }
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>

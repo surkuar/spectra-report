@@ -1,6 +1,6 @@
 <!-- spectra-report -->
 ## ❌ Spectra Report: 12 passed, 8 failed, 2 flaky, 2 skipped
-**Pass rate** 63.6% · **Duration** 5s · **Commit** `66471be` · [**Open full report →**](https://surkuar.github.io/spectra-report/main/4/)
+**Pass rate** 63.6% · **Duration** 5s · **Commit** `77c5dc2` · [**Open full report →**](https://surkuar.github.io/spectra-report/main/8/)
 
 ### Still failing (8)
 
